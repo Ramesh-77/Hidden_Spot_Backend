@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "This is the hidden spot server",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js"
@@ -23,6 +24,7 @@
   },
   "homepage": "https://github.com/Ramesh-77/Hidden_Spot_Backend#readme",
   "dependencies": {
+    "dotenv": "^16.4.5",
     "express": "^4.18.3"
   },
   "devDependencies": {
