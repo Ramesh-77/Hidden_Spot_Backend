@@ -3,6 +3,7 @@ import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { User } from "../models/user.models.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+// import { transporter } from "../utils/sendMail.js";
 
 // user register
 export const userRegister = asyncHandler(async (req, res) => {
@@ -37,6 +38,22 @@ export const userRegister = asyncHandler(async (req, res) => {
   if (!avatar) {
     throw new ApiError(400, "Avatar file is required");
   }
+  
+  // handle nodemailer
+   // use front end route
+  //  const link = `http://123.0.0.1:3000/api/v1/users/register`;
+  //  console.log(link);
+
+  //  // send email
+  //  let emailLink = await transporter.sendMail({
+  //    from: process.env.EMAIL_FROM, //from admin email
+  //    to: email, //to user email
+  //    subject: "Hidden spot - Email Verification Link",
+  //    html: `<a href=${link}>Click here</a> to verify your email`,
+  //  });
+  //  if(!emailLink){
+  //   throw new ApiError(500, `something went wrong while sending verification link to your ${email}`)
+  //  }
 
   // save data to database
   const user = await User.create({
