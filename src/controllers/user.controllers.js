@@ -7,6 +7,67 @@ import { Token } from "../models/token.models.js";
 import { randomBytes } from "crypto";
 import { verifyEmail } from "../utils/sendMail.js";
 
+// handle generate access and refresh token function
+// export const generateUserAccessAndRefreshTokens = asyncHandler(
+//   async (userId) => {
+//     try {
+//       // generate access token
+//       const user = await User.findById(userId);
+//       // generate access and refresh token
+//       const accessToken = await user.generateUserAccessToken();
+//       const refreshToken = await user.generateUserRefreshToken();
+//       console.log("access token", accessToken)
+//       // save refresh token to database
+//       user.refreshToken = refreshToken;
+
+//       /**
+//        *  validate before save false so that no need to validate again to save
+//        * refresh token
+//        *  */
+//       await user.save({ validateBeforeSave: false });
+//       // return the tokens
+//       console.log("user refresh token ", user.refreshToken)
+//       // console.log("user", user)
+
+//       return {accessToken, refreshToken};
+//     } catch (error) {
+//       throw new ApiError(
+//         500,
+//         "Something went wrong while generating access and refresh token"
+//       );
+//     }
+//   }
+// );
+
+// handle generate access token only
+export const generateUserAccessTokenOnly = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    const accessToken = await user.generateUserAccessToken();
+    return accessToken;
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "Something went wrong while generating access token"
+    );
+  }
+};
+// handle generate refresh token only
+export const generateUserRefreshTokenOnly = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    const refreshToken = await user.generateUserRefreshToken();
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
+    return refreshToken;
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "Something went wrong while generating refresh token"
+    );
+  }
+};
+
 // email verification user
 export const userRegister = asyncHandler(async (req, res) => {
   // getting user details from frontend
@@ -135,4 +196,76 @@ export const verifyUserSendEmail = asyncHandler(async (req, res) => {
   } catch (error) {
     throw new ApiError(500, "Something went wrong while activating account");
   }
+});
+
+// user login
+export const userLogin = asyncHandler(async (req, res) => {
+  const { username, email, password } = req.body;
+  // empty check
+
+  if (!(username || email) || !password) {
+    throw new ApiError(400, "All fields are required");
+  }
+
+  // user credentials field check
+  if (!(username || email)) {
+    throw new ApiError(400, "username or email is required");
+  }
+
+  // check if user exist or not
+  const user = await User.findOne({
+    $or: [{ username }, { email }],
+  });
+  // console.log("user id", user?._id)
+  if (!user) {
+    throw new ApiError(400, "username or email doesn not exist");
+  }
+
+  // checking only verified user can log in
+
+  const isPasswordValid = await user.isUserPasswordCorrect(password);
+  // console.log("password valid", isPasswordValid)
+  // if password does not match with db pass
+  if (!isPasswordValid) {
+    throw new ApiError(401, "password does not match");
+  }
+
+  if (!user.isVerified) {
+    throw new ApiError(400, "user is not authenticate");
+  }
+
+  // access and refresh token generate
+  // const { accessToken, refreshToken } = await generateUserAccessAndRefreshTokens(user?._id)
+  // let { accessToken, refreshToken } =
+  //    await generateUserAccessAndRefreshTokens(user?._id);
+
+  // access token func call
+  const accessToken = await generateUserAccessTokenOnly(user?._id);
+  const refreshToken = await generateUserRefreshTokenOnly(user?._id);
+
+  // save the user data
+  const loggedInUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
+  // configure the cookie options
+  const cookieOptions = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, cookieOptions)
+    .cookie("refreshToken", refreshToken, cookieOptions)
+    .json(
+      new ApiResponse(
+        200,
+        {
+          user: loggedInUser,
+          accessToken,
+          refreshToken,
+        },
+        "login successfull"
+      )
+    );
 });
