@@ -30,6 +30,8 @@ const userSchema = new Schema(
       type: Number,
       required: true,
       trim: true,
+      min: 10,
+      max: 10,
     },
     avatar: {
       type: String,
