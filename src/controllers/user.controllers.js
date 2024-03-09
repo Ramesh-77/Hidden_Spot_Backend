@@ -6,6 +6,7 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { Token } from "../models/token.models.js";
 import { randomBytes } from "crypto";
 import { verifyEmail } from "../utils/sendMail.js";
+import jwt from "jsonwebtoken";
 
 // handle generate access and refresh token function
 // export const generateUserAccessAndRefreshTokens = asyncHandler(
@@ -249,7 +250,7 @@ export const userLogin = asyncHandler(async (req, res) => {
   );
   // configure the cookie options
   const cookieOptions = {
-    httpOnly: true,
+    httpOnly: true, //cookie only modified by server
     secure: true,
   };
 
@@ -268,4 +269,125 @@ export const userLogin = asyncHandler(async (req, res) => {
         "login successfull"
       )
     );
+});
+
+// user logout
+export const userLogout = asyncHandler(async (req, res) => {
+  await User.findById(
+    req.user?._id,
+    {
+      // delete refresh token
+      $unset: {
+        refreshToken: 1,
+      },
+    },
+    { new: true }
+  );
+  // cookie config
+  const cookieOptions = {
+    httpOnly: true,
+    secure: true,
+  };
+  return res
+    .status(200)
+    .clearCookie("accessToken", cookieOptions)
+    .clearCookie("refreshCookie", cookieOptions)
+    .json(new ApiResponse(200, {}, "user logout"));
+});
+
+// get CurrentUser
+export const getCurrentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(new ApiResponse(200, req.user, "Current user data fetched"));
+});
+
+/**
+ * if access token is expired while using service,
+ * generate new access token with help of refresh token
+ */
+export const refreshAccessToken = asyncHandler(async (req, res) => {
+  try {
+    // get refresh token from user via cookie or body
+    const incomingRefreshToken =
+      req.user?.refreshToken || req.body.refreshToken;
+    if (!incomingRefreshToken) {
+      throw new ApiError(401, "Unauthorized refresh token ");
+    }
+    // verify refresh token with refresh token secret key
+    const decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+    // find user by verify token
+    const user = await User.findById(decodedToken?._id);
+
+    if (!user) {
+      throw new ApiError(401, "Unauthorized user");
+    }
+
+    // matching the user provided refresh token and db refresh token
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new ApiError(401, "Refresh token is already used or expired");
+    }
+    // generate new access token and refresh token
+    const accessToken = await generateUserAccessTokenOnly(user?._id);
+    const refreshToken = await generateUserRefreshTokenOnly(user?._id);
+
+    // set the tokens in cookie
+    const cookieOptions = {
+      httpOnly: true,
+      secure: true,
+    };
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, cookieOptions)
+      .cookie("refreshToken", refreshToken, cookieOptions)
+      .json(
+        new ApiResponse(
+          200,
+          {
+            accessToken,
+            refreshToken,
+          },
+          "Access token refreshed"
+        )
+      );
+  } catch (error) {
+    throw new ApiError(401, error?.message, "Invalid refresh token");
+  }
+});
+
+// current User password changed
+export const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  // check empty
+  if (!oldPassword || !newPassword) {
+    throw new ApiError(400, "All fields required");
+  }
+
+  // get current user
+  const user = await User.findOne(req.user?._id);
+  if (!user) {
+    throw new ApiError(400, "invalid user");
+  }
+
+  // compare old and new pass if same
+  const isOldPasswordCorrect = await user.isUserPasswordCorrect(oldPassword);
+  if (!isOldPasswordCorrect) {
+    throw new ApiError(400, "Invalid old password");
+  }
+
+  // checking whether new and old pass same
+  if (newPassword === isOldPasswordCorrect) {
+    throw new ApiError(400, "new password cannot be same as old password");
+  }
+
+  user.password = newPassword;
+
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password changed successfully"));
 });
