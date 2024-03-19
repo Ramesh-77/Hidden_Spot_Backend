@@ -12,7 +12,7 @@ const userSchema = new Schema(
     },
     username: {
       type: String,
-      required: true,
+      // required: true,
       trim: true,
       unique: true,
     },
@@ -34,6 +34,8 @@ const userSchema = new Schema(
     },
     avatar: {
       type: String,
+      default:
+        "https://cdn4.vectorstock.com/i/1000x1000/06/18/male-avatar-profile-picture-vector-10210618.jpg",
     },
     isVerified: {
       type: Boolean,
@@ -65,8 +67,8 @@ userSchema.methods.isUserPasswordCorrect = async function (password) {
 };
 
 // generate access token
-userSchema.methods.generateUserAccessToken = async function () {
-  return await jwt.sign(
+userSchema.methods.generateUserAccessToken = function () {
+  return jwt.sign(
     {
       _id: this._id,
       fullName: this.fullName,
@@ -85,8 +87,8 @@ userSchema.methods.generateUserAccessToken = async function () {
 };
 
 // generate refresh token
-userSchema.methods.generateUserRefreshToken = async function () {
-  return await jwt.sign(
+userSchema.methods.generateUserRefreshToken = function () {
+  return jwt.sign(
     {
       _id: this._id,
     },

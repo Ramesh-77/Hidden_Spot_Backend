@@ -2,7 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import { User } from "../models/user.models.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+// import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { Token } from "../models/token.models.js";
 import { randomBytes } from "crypto";
 import { verifyEmail } from "../utils/sendMail.js";
@@ -97,11 +97,11 @@ export const userRegister = asyncHandler(async (req, res) => {
   }
 
   // upload image to cloudinary
-  const avatar = await uploadOnCloudinary(req.file?.path);
-  //   if not found
-  if (!avatar) {
-    throw new ApiError(400, "Avatar file is required");
-  }
+  // const avatar = await uploadOnCloudinary(req.file?.path);
+  // //   if not found
+  // if (!avatar) {
+  //   throw new ApiError(400, "Avatar file is required");
+  // }
 
   // save data to database
   const user = await User.create({
@@ -109,7 +109,7 @@ export const userRegister = asyncHandler(async (req, res) => {
     username,
     email,
     phone,
-    avatar: avatar.url,
+    // avatar: avatar.url,
     password,
   });
 
@@ -136,7 +136,7 @@ export const userRegister = asyncHandler(async (req, res) => {
 
   // create frontend link to send to user gmail
 
-  const link = `http://123.0.0.1:3000/api/v1/users/register/${user._id}/${token?.token}`;
+  const link = `http://127.0.0.1:5173/user/register/${user._id}/${token?.token}`;
   console.log("token link", link);
 
   // send link to requested gmail
