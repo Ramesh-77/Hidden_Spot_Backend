@@ -7,6 +7,8 @@ import { Token } from "../models/token.models.js";
 import { randomBytes } from "crypto";
 import { verifyEmail } from "../utils/sendMail.js";
 import jwt from "jsonwebtoken";
+import { generateOTP } from "../utils/otpGenerator.js";
+import bcrypt from "bcrypt";
 
 // handle generate access and refresh token function
 // export const generateUserAccessAndRefreshTokens = asyncHandler(
@@ -117,17 +119,23 @@ export const userRegister = asyncHandler(async (req, res) => {
   const userCreated = await User.findById(user?._id).select(
     "-password -refreshToken"
   );
-  // // save the user
-  // res
-  //   .status(201)
-  //   .json(new ApiResponse(200, userCreated, "User registration successful"));
+
   await userCreated.save();
 
+  // calling otp generate function
+  const otp = await generateOTP();
+
+
+  const hashedOTP = await bcrypt.hash(otp.toString(), Number(10));
+
+  // console.log("hashedOTP", hashedOTP);
   // create new token
   const token = await Token.create({
     userId: user?._id,
     token: randomBytes(16).toString("hex"),
+    otp: hashedOTP,
   });
+  // console.log("db otp", token?.otp);
   // save the token in db
   // res
   //   .status(201)
@@ -136,16 +144,18 @@ export const userRegister = asyncHandler(async (req, res) => {
 
   // create frontend link to send to user gmail
 
-  const link = `http://127.0.0.1:5173/user/register/${user._id}/${token?.token}`;
-  console.log("token link", link);
+  const link = `http://127.0.0.1:5173/user/register/${user?._id}`;
+  // console.log("Email Verify Link", link);
 
   // send link to requested gmail
+
   await verifyEmail(
     email,
     "Hidden Spot - Activation link",
     `
     <div>
-    <a href=${link}>Click here to activate your account</a>
+      <a href="${link}">Proceed to activate your account</a> <br>
+      <span>Use this device code: ${otp}</span>
     </div>
     `
   );
@@ -168,32 +178,44 @@ export const userRegister = asyncHandler(async (req, res) => {
   // })
 });
 
-// activate the user via email
+// activate the user via otp code
 export const verifyUserSendEmail = asyncHandler(async (req, res) => {
   try {
-    const { userId, token } = req.params;
+    const { userId } = req.params;
+    const {otp} = req.body
 
-    const tokenUser = await Token.findOne({
-      userId: userId,
-      token: token,
+    let tokenUser = await Token.find({
+      $or: [{ userId }, { otp}],
     });
+    // const tokenUser= await Token.findOne({
+    //   userId: userId,
+    //   token: token,
+    //   otp: otp
+    // })
+
     if (!tokenUser) {
       throw new ApiError(401, "token and user id is not found");
     }
-    const user = await User.findByIdAndUpdate(
-      tokenUser?.userId,
-      {
-        $set: {
-          isVerified: true,
+    // compare otp of that user
+    let isOTPValid = await bcrypt.compare(otp, tokenUser[0]?.otp);
+    console.log("otp check", isOTPValid);
+    if (!isOTPValid) {
+      throw new ApiError(400, "OTP is not valid");
+    } else {
+      const user = await User.findByIdAndUpdate(
+        tokenUser[0]?.userId,
+        {
+          $set: {
+            isVerified: true,
+          },
         },
-      },
-      { new: true }
-    );
-
-    await Token.findByIdAndDelete(tokenUser?._id);
-    return res
-      .status(200)
-      .json(new ApiResponse(200, user, "Account verified successfully"));
+        { new: true }
+      );
+      await Token.findByIdAndDelete(tokenUser[0]?._id);
+      return res
+        .status(200)
+        .json(new ApiResponse(200, user, "Account verified successfully"));
+    }
   } catch (error) {
     throw new ApiError(500, "Something went wrong while activating account");
   }
