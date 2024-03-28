@@ -74,21 +74,23 @@ export const generateUserRefreshTokenOnly = async (userId) => {
 // email verification user
 export const userRegister = asyncHandler(async (req, res) => {
   // getting user details from frontend
-  const { fullName, username, email, password, phone } = req.body;
+  const { fullName, email, password, phone } = req.body;
 
   //   checking empty field
   if (
-    [fullName, username, email, password, phone].some(
-      (field) => field?.trim() === ""
-    )
+    [fullName, email, password, phone].some((field) => field?.trim() === "")
   ) {
     throw new ApiError(400, "All fields are required");
   }
 
   //   checking existed user if already registerd
   const existedUser = await User.findOne({
-    $or: [{ username }, { email }],
+    $or: [{ email: email }],
   });
+  // const existedUser = await User.findOne({
+  //   email: email
+  // })
+  // console.log("existed user", existedUser)
 
   //   if user found
   if (existedUser) {
@@ -97,7 +99,6 @@ export const userRegister = asyncHandler(async (req, res) => {
       "user with given username or email already existed"
     );
   }
-
   // upload image to cloudinary
   // const avatar = await uploadOnCloudinary(req.file?.path);
   // //   if not found
@@ -108,7 +109,7 @@ export const userRegister = asyncHandler(async (req, res) => {
   // save data to database
   const user = await User.create({
     fullName,
-    username,
+    // username,
     email,
     phone,
     // avatar: avatar.url,
@@ -124,7 +125,6 @@ export const userRegister = asyncHandler(async (req, res) => {
 
   // calling otp generate function
   const otp = await generateOTP();
-
 
   const hashedOTP = await bcrypt.hash(otp.toString(), Number(10));
 
@@ -173,6 +173,7 @@ export const userRegister = asyncHandler(async (req, res) => {
         "Email verification link sent to your account, please activate to continue"
       )
     );
+
   // .send({
   //   message: "email activation link sent already",
   // })
@@ -182,10 +183,10 @@ export const userRegister = asyncHandler(async (req, res) => {
 export const verifyUserSendEmail = asyncHandler(async (req, res) => {
   try {
     const { userId } = req.params;
-    const {otp} = req.body
+    const { otp } = req.body;
 
     let tokenUser = await Token.find({
-      $or: [{ userId }, { otp}],
+      $or: [{ userId }, { otp }],
     });
     // const tokenUser= await Token.findOne({
     //   userId: userId,
@@ -198,7 +199,7 @@ export const verifyUserSendEmail = asyncHandler(async (req, res) => {
     }
     // compare otp of that user
     let isOTPValid = await bcrypt.compare(otp, tokenUser[0]?.otp);
-    console.log("otp check", isOTPValid);
+    // console.log("otp check", isOTPValid);
     if (!isOTPValid) {
       throw new ApiError(400, "OTP is not valid");
     } else {
@@ -223,21 +224,30 @@ export const verifyUserSendEmail = asyncHandler(async (req, res) => {
 
 // user login
 export const userLogin = asyncHandler(async (req, res) => {
-  const { username, email, password } = req.body;
+  // const { username, email, password } = req.body;
+  const { email, password } = req.body;
+  console.log(req.body);
   // empty check
 
-  if (!(username || email) || !password) {
+  // if (!(username || email) || !password) {
+  //   throw new ApiError(400, "All fields are required");
+
+  if (!email || !password) {
     throw new ApiError(400, "All fields are required");
   }
 
   // user credentials field check
-  if (!(username || email)) {
-    throw new ApiError(400, "username or email is required");
-  }
+  // if (!(username || email)) {
+  //   throw new ApiError(400, "username or email is required");
+  // }
 
   // check if user exist or not
+  // const user = await User.findOne({
+  //   // $or: [{ username }, { email }],
+  //   $or: [ { email }],
+  // });
   const user = await User.findOne({
-    $or: [{ username }, { email }],
+    email: email,
   });
   // console.log("user id", user?._id)
   if (!user) {
@@ -413,3 +423,26 @@ export const changeCurrentPassword = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, {}, "Password changed successfully"));
 });
+
+// get all registered users
+export const getRegisteredUserData = asyncHandler(async (req, res) => {
+  const user = await User.find({role: "USER"});
+  if (!user) {
+    throw new ApiError(400, "Error occur while fetching user data");
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Users data fetched successfully"));
+  // return res.status(200).json({message: "fetched", data: user})
+});
+
+
+// delete registered user by admin only
+export const deleteRegisteredUser = asyncHandler(async(req, res)=>{
+  const user = await User.findByIdAndDelete(req.params.id)
+  console.log("user", user)
+  if(!user){
+    throw new ApiError(400, "Something went wrong when deleting user")
+  }
+  return res.status(200).json(new ApiResponse(200, {}, "User deleted successfully"))
+})

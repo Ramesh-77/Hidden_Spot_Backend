@@ -10,17 +10,11 @@ const userSchema = new Schema(
       trim: true,
       index: true,
     },
-    username: {
-      type: String,
-      // required: true,
-      trim: true,
-      unique: true,
-    },
     email: {
       type: String,
       required: true,
-      trim: true,
       unique: true,
+      trim: true,
     },
     password: {
       type: String,
@@ -72,7 +66,7 @@ userSchema.methods.generateUserAccessToken = function () {
     {
       _id: this._id,
       fullName: this.fullName,
-      username: this.username,
+      // username: this.username,
       email: this.email,
       phone: this.phone,
       avatar: this.avatar,

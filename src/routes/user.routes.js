@@ -1,7 +1,9 @@
 import { Router } from "express";
 import {
   changeCurrentPassword,
+  deleteRegisteredUser,
   getCurrentUser,
+  getRegisteredUserData,
   userLogin,
   userLogout,
   userRegister,
@@ -23,6 +25,14 @@ router.route("/get-current-user").get(verifyJWT, getCurrentUser);
 router
   .route("/changed-current-user-password")
   .post(verifyJWT, changeCurrentPassword);
+
+  // admin purpose only
+
+  // get all user data
+  router.route("/get-registered-users").get(getRegisteredUserData)
+
+  // delete particular user
+  router.route("/delete-registered-user/:id").post(deleteRegisteredUser)
 
 
 export default router;
