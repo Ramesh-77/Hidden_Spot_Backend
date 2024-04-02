@@ -15,8 +15,10 @@ app.use(express.static("public"));
 
 // import routes
 import userRoute from "./routes/user.routes.js";
+import menuRoute from "./routes/menu.routes.js"
 
 // declare route
 app.use("/api/v1/users", userRoute);
+app.use("/api/v1/menu", menuRoute)
 // exporting app
 export { app };
