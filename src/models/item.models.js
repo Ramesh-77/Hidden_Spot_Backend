@@ -13,7 +13,7 @@ const itemSchema = new Schema(
       required: true,
     },
     itemQuantity: {
-      type: Number,
+      type: String,
       default: 1,
     },
     menu: {
@@ -21,17 +21,20 @@ const itemSchema = new Schema(
       ref: "Menu",
     },
     admin: {
-       type: Schema.Types.ObjectId,
-       ref: "User" 
+      type: Schema.Types.ObjectId,
+      ref: "User",
     },
     itemDesc: {
       type: String,
     },
-    itemImage: {
-      type: Array,
-      default:
-        "https://imgix.theurbanlist.com/content/article/Blackwood_bacon_and_egg_roll.jpg",
-    },
+    avatar: [
+      {
+        type: String,
+        default:
+          "https://imgix.theurbanlist.com/content/article/Blackwood_bacon_and_egg_roll.jpg",
+      },
+    ],
+    
   },
   { timestamps: true }
 );

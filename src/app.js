@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+
 const app = express();
 
 // essential middlewares
@@ -9,9 +10,11 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static("public"));
+app.use(express.json());
+
+app.use('/public',express.static("public"));
+
 
 // import routes
 import userRoute from "./routes/user.routes.js";
