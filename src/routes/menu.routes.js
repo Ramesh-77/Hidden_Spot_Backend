@@ -2,14 +2,19 @@ import { Router } from "express";
 import {
   addItem,
   addMenu,
+  addService,
   deleteItem,
   deleteMenu,
+  deleteService,
   getAllMenu,
+  getAllService,
   getItem,
   getSingleItem,
   getSingleMenu,
+  getSingleService,
   updateItem,
   updateMenu,
+  updateService,
 } from "../controllers/menu.controllers.js";
 import { upload } from "../middlewares/multer.middlewares.js";
 const router = Router();
@@ -30,5 +35,14 @@ router.route("/update-item/:id").put(upload.single("avatar"),updateItem)
 
 router.route("/single-item/:id").get(getSingleItem)
 // router.route("/add-item").post(upload.single("avatar"), addItem)
+
+// service route
+router.route('/add-service').post(upload.single("avatar"), addService)
+router.route('/get-service').get(getAllService)
+router.route('/delete-service/:id').post(deleteService)
+router.route("/update-service/:id").put(upload.single("avatar"),updateService)
+router.route("/single-service/:id").get(getSingleService)
+
+
 
 export default router;
